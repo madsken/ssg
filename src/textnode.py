@@ -45,32 +45,18 @@ def text_node_to_html_node(text_node):
         case default:
             raise Exception("TextType did not match cases")
 
-def split_nodes_delimiter(old_nodes, delimiter, text_type):
-    split_nodes = []
-    for old_node in old_nodes:
-        if old_node.text_type != TextType.TEXT:
-            split_nodes.append(old_node)
-            continue
-
-        split_node = []
-        sections = old_node.text.split(delimiter)
-        if len(sections) % 2 == 0:
-            raise ValueError("invalid text, contains non enclosed section")
-
-        for i in range(len(sections)):
-            if sections[i] == "":
-                continue
-            if i % 2 == 0:
-                split_node.append(TextNode(sections[i], TextType.TEXT))
-            else:
-                split_node.append(TextNode(sections[i], text_type))
-        split_nodes.extend(split_node)
-
-    return split_nodes
-
-
-
-
 if __name__ == "__main__":
-    node = TextNode("This is text with a `code block` word", TextType.TEXT)
-    new_nodes = split_nodes_delimiter([node], "`", TextType.CODE)
+    node = TextNode(
+        "This is text with an ![image](https://i.imgur.com/zjjcJKZ.png) and another ![second image](https://i.imgur.com/3elNhQu.png)",
+        TextType.TEXT,
+    )
+    new_nodes = split_nodes_image([node])
+    print(new_nodes)
+    # [
+    #     TextNode("This is text with a link ", TextType.TEXT),
+    #     TextNode("to boot dev", TextType.LINK, "https://www.boot.dev"),
+    #     TextNode(" and ", TextType.TEXT),
+    #     TextNode(
+    #         "to youtube", TextType.LINK, "https://www.youtube.com/@bootdotdev"
+    #     ),
+    # ]
