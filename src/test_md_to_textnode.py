@@ -6,6 +6,7 @@ from md_to_textnode import (
     split_nodes_link,
     extract_markdown_links,
     extract_markdown_images,
+    text_to_textnodes,
 )
 
 class TestSplitNodesDelimiter(unittest.TestCase):
@@ -162,6 +163,48 @@ class TestSplitNodesImages(unittest.TestCase):
             ],
             new_nodes,
         )
+
+class TestTextToTextNodeFull(unittest.TestCase):
+    def test_all_types(self):
+        input_text = "This is **text** with an _italic_ word and a `code block` and an ![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg) and a [link](https://boot.dev)"
+        nodes = text_to_textnodes(input_text)
+        self.assertEqual([
+            TextNode("This is ", TextType.TEXT),
+            TextNode("text", TextType.BOLD),
+            TextNode(" with an ", TextType.TEXT),
+            TextNode("italic", TextType.ITALIC),
+            TextNode(" word and a ", TextType.TEXT),
+            TextNode("code block", TextType.CODE),
+            TextNode(" and an ", TextType.TEXT),
+            TextNode("obi wan image", TextType.IMAGE, "https://i.imgur.com/fJRm4Vk.jpeg"),
+            TextNode(" and a ", TextType.TEXT),
+            TextNode("link", TextType.LINK, "https://boot.dev"),
+            ],
+            nodes
+        )
+    
+    def test_no_types(self):
+        input_text = "This is pure text"
+        nodes = text_to_textnodes(input_text)
+        self.assertEqual([TextNode("This is pure text", TextType.TEXT)], nodes)
+    
+    def test_unordered(self):
+        input_text = "This ![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg) is _text_ with an italic word **and a** `code block` and an and a [link](https://boot.dev)"
+        nodes = text_to_textnodes(input_text)
+        self.assertEqual([
+            TextNode("This ", TextType.TEXT),
+            TextNode("obi wan image", TextType.IMAGE, "https://i.imgur.com/fJRm4Vk.jpeg"),
+            TextNode(" is ", TextType.TEXT),
+            TextNode("text", TextType.ITALIC),
+            TextNode(" with an italic word ", TextType.TEXT),
+            TextNode("and a", TextType.BOLD),
+            TextNode(" ", TextType.TEXT),
+            TextNode("code block", TextType.CODE),
+            TextNode(" and an and a ", TextType.TEXT),
+            TextNode("link", TextType.LINK, "https://boot.dev"),
+            ], nodes)
+        
+
 
 if __name__ == "__main__":
     unittest.main()

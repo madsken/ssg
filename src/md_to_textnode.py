@@ -22,7 +22,6 @@ def split_nodes_delimiter(old_nodes, delimiter, text_type):
             else:
                 split_node.append(TextNode(sections[i], text_type))
         split_nodes.extend(split_node)
-
     return split_nodes
 
 def split_nodes_image(old_nodes):
@@ -76,3 +75,20 @@ def extract_markdown_images(text):
 
 def extract_markdown_links(text):
     return re.findall(r"(?<!!)\[(.*?)\]\((.*?)\)", text)
+
+def text_to_textnodes(text):
+    text_node = TextNode(text, TextType.TEXT)
+    nodes = [text_node]
+    nodes = split_nodes_delimiter(nodes, "**", TextType.BOLD)
+    nodes = split_nodes_delimiter(nodes, "_", TextType.ITALIC)
+    nodes = split_nodes_delimiter(nodes, "`", TextType.CODE)
+    nodes = split_nodes_image(nodes)
+    nodes = split_nodes_link(nodes)
+    return nodes
+    
+
+
+if __name__ == "__main__":
+    nodes = text_to_textnodes("This is **text** with an _italic_ word and a `code block` and an ![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg) and a [link](https://boot.dev)")
+    for node in nodes:
+        print(node)
