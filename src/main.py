@@ -1,9 +1,10 @@
 import os
 import shutil
+import sys
 from generate_html import generate_pages_recursive
 
 dir_path_static = "./static"
-dir_path_public = "./public"
+dir_path_public = "./docs"
 dir_path_content = "./content"
 template_path = "./template.html"
 
@@ -30,7 +31,7 @@ def copy_files_to_dest(path_to_src, path_to_dest):
             copy_files_to_dest(path_to_item, new_dest_path)
             
 
-def generate_public(src, dest="public"):
+def generate_public(src, dest):
     if not os.path.exists(dest):
         os.mkdir(dest)
     dest_path = os.path.abspath(dest)
@@ -39,7 +40,10 @@ def generate_public(src, dest="public"):
     copy_files_to_dest(src_path, dest_path)
 
 if __name__ == "__main__":
+    basepath = sys.argv[1]
+
     print("Cleaning public, and copying static files")
     generate_public(dir_path_static, dir_path_public)
+
     print("Generating page...")
-    generate_pages_recursive(dir_path_content, template_path, dir_path_public)
+    generate_pages_recursive(dir_path_content, template_path, dir_path_public, basepath)
