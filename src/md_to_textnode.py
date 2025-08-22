@@ -1,6 +1,15 @@
-from textnode import TextNode, TextType
+from htmlnode import HTMLNode, LeafNode, ParentNode
+from textnode import TextNode, TextType, text_node_to_html_node
+from enum import Enum
 import re
 
+class BlockType(Enum):
+    PARAGRAPH = "paragraph"
+    HEADING = "heading"
+    CODE = "code"
+    QUOTE = "quote"
+    UNORDERED_LIST = "unordered_list"
+    ORDERED_LIST = "ordered_list"
 
 def split_nodes_delimiter(old_nodes, delimiter, text_type):
     split_nodes = []
@@ -86,9 +95,146 @@ def text_to_textnodes(text):
     nodes = split_nodes_link(nodes)
     return nodes
     
+def markdown_to_blocks(md_doc):
+    split_doc = md_doc.split("\n\n")
+    stripped_doc = []
+    for doc in split_doc:
+        if len(doc) != 0:
+            stripped_doc.append(doc.strip())
+    return stripped_doc
+
+##Note. Could have been a simpler solution using .startswith()
+def block_to_blocktype(block):
+    #Match headers
+    match = re.fullmatch(r"^(#{1,6})\s+(.*)", block)
+    if match is not None:
+        if block == match.string:
+            return BlockType.HEADING
+    #Match code blocks
+    match = re.fullmatch(r"```[\s\S]*?```", block)
+    if match is not None:
+        if block == match.string:
+            return BlockType.CODE
+
+    #Check if quote block
+    if block[0] == ">":
+        lines = block.split("\n")
+        for line in lines:
+            if line[0] != ">":
+                return BlockType.PARAGRAPH
+        return BlockType.QUOTE
+    
+    #Check if unordered list block
+    if block[:2] == "- ":
+        lines = block.split("\n")
+        for line in lines:
+            if line[:2] != "- ":
+                return BlockType.PARAGRAPH
+        return BlockType.UNORDERED_LIST
+
+    #check for ordered list block
+    for line in block.split("\n"):
+        match = re.findall(r"^\d+\.\s+.+$", line)
+        if len(match) == 0:
+            return BlockType.PARAGRAPH
+    return BlockType.ORDERED_LIST
+
+
+def markdown_to_html_node(markdown):
+    blocks = markdown_to_blocks(markdown)
+    root_children = []
+    for block in blocks:
+        html_node = block_to_htmlnode(block)
+        root_children.append(html_node)
+    return ParentNode("div", root_children)
+
+def block_to_htmlnode(block):
+    blocktype = block_to_blocktype(block)
+    if blocktype ==  BlockType.PARAGRAPH:
+        return paragraph_to_htmlnode(block)
+    if blocktype ==  BlockType.HEADING:
+        return heading_to_htmlnode(block)
+    if blocktype ==  BlockType.CODE:
+        return code_to_htmlnode(block)
+    if blocktype ==  BlockType.QUOTE:
+        return quote_to_htmlnode(block)
+    if blocktype ==  BlockType.UNORDERED_LIST:
+        return ul_to_htmlnode(block)
+    if blocktype ==  BlockType.ORDERED_LIST:
+        return ol_to_htmlnode(block)
+    raise ValueError(f"invalid blocktype passed: {blocktype}")
+
+def text_to_children(text):
+    text_nodes = text_to_textnodes(text)
+    children = []
+    for node in text_nodes:
+        children.append(text_node_to_html_node(node))
+    return children
+
+def paragraph_to_htmlnode(block):
+    text = " ".join(block.split("\n"))
+    children = text_to_children(text)
+    return ParentNode("p", children)
+
+def heading_to_htmlnode(block):
+    level = 0
+    for char in block:
+        if char == "#":
+            level += 1
+        else:
+            break
+    if level + 1 >= len(block):
+        raise ValueError(f"Invalid heading level: {level}")
+    text = block[level + 1: ]
+    children = text_to_children(text)
+    return ParentNode(f"h{level}", children)
+
+def code_to_htmlnode(block):
+    if not block.startswith("```") or not block.endswith("```"):
+        raise ValueError("Invalid code block, does not start or end with ```")
+    text = block[4:-3]
+    child = [text_node_to_html_node(TextNode(text, TextType.TEXT))] #Important: Has to be added to a list (hence the [])
+    code_node = [ParentNode("code", child)] #Important: Has to be added to a list (hence the [])
+    return ParentNode("pre", code_node) #<pre> tag is for formatting so the text has the same size i think???
+
+def quote_to_htmlnode(block):
+    lines = block.split("\n")
+    new_lines = []
+    for line in lines:
+        if not line.startswith(">"):
+            raise ValueError("Wrong quotation formatting")
+        new_lines.append(line.lstrip(">").strip())
+    text = " ".join(new_lines)
+    children = text_to_children(text)
+    return ParentNode("blockquote", children)
+     
+def ul_to_htmlnode(block):
+    lines = block.split("\n")
+    list_items = []
+    for line in lines:
+        text = line[2:]
+        children = text_to_children(text)
+        list_items.append(ParentNode("li", children))
+    return ParentNode("ul", list_items)
+
+def ol_to_htmlnode(block):
+    lines = block.split("\n")
+    list_items = []
+    for line in lines:
+        text = line[3:]
+        children = text_to_children(text)
+        list_items.append(ParentNode("li", children))
+    return ParentNode("ol", list_items)
+
 
 
 if __name__ == "__main__":
-    nodes = text_to_textnodes("This is **text** with an _italic_ word and a `code block` and an ![obi wan image](https://i.imgur.com/fJRm4Vk.jpeg) and a [link](https://boot.dev)")
-    for node in nodes:
-        print(node)
+    md = """
+This is **bolded** paragraph
+text in a p
+tag here
+
+This is another paragraph with _italic_ text and `code` here
+
+"""
+    markdown_to_html_node(md)
