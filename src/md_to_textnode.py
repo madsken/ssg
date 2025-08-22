@@ -227,7 +227,6 @@ def ol_to_htmlnode(block):
     return ParentNode("ol", list_items)
 
 
-
 if __name__ == "__main__":
     md = """
 This is **bolded** paragraph
